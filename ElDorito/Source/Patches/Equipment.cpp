@@ -92,6 +92,7 @@ namespace
 
 	using namespace Blam::Math;
 
+	int headCount = 0;
 	void __stdcall DoPickup(uint32_t playerIndex, uint32_t objectIndex)
 	{
 		struct PickupData
@@ -131,6 +132,21 @@ namespace
 		auto equipmentObject = Blam::Objects::Get(objectIndex);
 		if (!equipmentObject)
 			return;
+
+		//This needs work!
+		bool headhunter = true;
+		if (headhunter)
+		{
+			if (equipmentObject->TagIndex == 0x00001565)
+			{
+				headCount = headCount + 1;
+
+				const auto objects_dispose = (void(*)(uint32_t objectIndex))(0x00B2CD10);
+				objects_dispose(objectIndex);
+
+				return;
+			}
+		}
 
 		// return if the unit already holds equipment
 		auto primaryEquipmentObjectIndex = Pointer(unitObject)(0x2F0).Read<uint32_t>();
@@ -463,6 +479,13 @@ namespace
 
 		auto grenadeBlock = matchGlobalsPtr(0x12c).Read<TagBlock<GrenadeBlock>>();
 
+		static auto Objects_InitializeNewObject = (void(__cdecl *)(void* objectData, int tagIndex, int objectIndex, int a4))(0x00B31590);
+		static auto Objects_SpawnObject = (uint32_t(__cdecl*)(void* objectData))(0x00B30440);
+		static auto Simulation_SpawnObject = (char(__cdecl *)(unsigned __int32 unitObjectIndex))(0x4B2CD0);
+		static auto ItemDrop = (void(__cdecl*)(uint32_t unitObjectIndex, uint32_t itemObjectIndex, int a3, float a4, int a5))(0xB49580);
+
+		uint8_t objectData[0x18Cu];
+
 		for (auto i = 0; i < 4; i++)
 		{
 			auto& blockElem = grenadeBlock.Elements[i];
@@ -471,15 +494,10 @@ namespace
 
 			auto nadeCount = unitObjectPtr(0x320 + i).Read<uint8_t>();
 
-			uint8_t objectData[0x18Cu];
 
 			// spawn a new grenade object for each grenade the unit had
 			for (auto j = 0; j < nadeCount; j++)
 			{
-				static auto Objects_InitializeNewObject = (void(__cdecl *)(void* objectData, int tagIndex, int objectIndex, int a4))(0x00B31590);
-				static auto Objects_SpawnObject = (uint32_t(__cdecl*)(void* objectData))(0x00B30440);
-				static auto Simulation_SpawnObject = (char(__cdecl *)(unsigned __int32 unitObjectIndex))(0x4B2CD0);
-				static auto ItemDrop = (void(__cdecl*)(uint32_t unitObjectIndex, uint32_t itemObjectIndex, int a3, float a4, int a5))(0xB49580);
 
 				Objects_InitializeNewObject(objectData, blockElem.Equipment.TagIndex, unitObjectIndex, 0);
 
@@ -500,6 +518,32 @@ namespace
 				// notify clients that an object has been spawned
 				Simulation_SpawnObject(grenadeObjectIndex);
 			}
+		}
+
+		bool headhunter = true;
+		if (headhunter)
+		{
+			for (int i = 0; i < headCount + 1; i++)
+			{
+				Objects_InitializeNewObject(objectData, 0x00001565, unitObjectIndex, 0);
+				Pointer(objectData)(0x1c).WriteFast(unitPosition);
+				auto skullObjectIndex = Objects_SpawnObject(objectData);
+				uint8_t *skullObject = (uint8_t*)Blam::Objects::Get(skullObjectIndex);
+
+				if (skullObject)
+				{
+					*(uint32_t*)(skullObject + 0x180) = Blam::Time::GetGameTicks();
+					*(uint8_t*)(skullObject + 0x178) &= 0xFDu;
+					*(uint8_t*)(skullObject + 0x179) = 0;
+					*(uint32_t*)(skullObject + 0x184) = -1;
+				}
+				ItemDrop(unitObjectIndex, skullObjectIndex, 0, 1.0f, 1);
+
+				// notify clients that an object has been spawned
+				Simulation_SpawnObject(skullObjectIndex);
+			}
+			
+			headCount = 0;
 		}
 	}
 

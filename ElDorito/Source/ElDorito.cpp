@@ -32,6 +32,7 @@
 #include "Patches/Camera.hpp"
 #include "Discord/DiscordRPC.h"
 #include "ThirdParty/SOP.hpp"
+#include "Patches/Headhunter.hpp"
 
 #include "Blam/Cache/StringIdCache.hpp"
 
@@ -264,6 +265,8 @@ void ElDorito::Initialize()
 	Server::VariableSynchronization::Initialize();
 	Server::Rcon::Initialize();
 	Server::Signaling::Initialize();
+
+	Patches::Headhunter::Init();
 
 	if (!Blam::Cache::StringIDCache::Instance.Load(mapsFolder + "string_ids.dat"))
 	{

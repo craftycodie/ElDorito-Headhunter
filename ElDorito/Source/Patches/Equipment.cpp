@@ -137,16 +137,18 @@ namespace
 			return;
 
 		//This needs work!
-		bool headhunter = true;
-		if (headhunter)
+		if (GetHeadhunterEnabled())
 		{
 			if (equipmentObject->TagIndex == 0x00001561)
 			{
-				if (headCount > 9)
+				uint32_t skullCount = GetSkullCountByUid(playerDatum->Properties.Uid);
+
+				if (skullCount >= GetMaxSkullCount())
 					return;
 
-				headCount = headCount + 1;
-				Patches::Ui::UpdateHeadhunterSkullsString();
+				skullCount = skullCount + 1;
+
+				UpdateSkullCountByUid(playerDatum->Properties.Uid, skullCount);
 
 				HUDIterator hudIterator(playerIndex);
 				while (hudIterator.Advance())
@@ -537,31 +539,37 @@ namespace
 			}
 		}
 
-		bool headhunter = true;
-		if (headhunter)
+		using namespace Patches::Headhunter;
+
+		if (GetHeadhunterEnabled())
 		{
-			for (int i = 0; i < headCount + 1; i++)
+			for (auto player : Blam::Players::GetPlayers())
 			{
-				Objects_InitializeNewObject(objectData, 0x00001561, unitObjectIndex, 0);
-				Pointer(objectData)(0x1c).WriteFast(unitPosition);
-				auto skullObjectIndex = Objects_SpawnObject(objectData);
-				uint8_t *skullObject = (uint8_t*)Blam::Objects::Get(skullObjectIndex);
-
-				if (skullObject)
+				if (player.DeadSlaveUnit.Handle == unitObjectIndex)
 				{
-					*(uint32_t*)(skullObject + 0x180) = Blam::Time::GetGameTicks();
-					*(uint8_t*)(skullObject + 0x178) &= 0xFDu;
-					*(uint8_t*)(skullObject + 0x179) = 0;
-					*(uint32_t*)(skullObject + 0x184) = -1;
-				}
-				ItemDrop(unitObjectIndex, skullObjectIndex, 0, 1.0f, 1);
+					for (int i = 0; i < GetSkullCountByUid(player.Properties.Uid) + 1; i++)
+					{
+						Objects_InitializeNewObject(objectData, 0x00001561, unitObjectIndex, 0);
+						Pointer(objectData)(0x1c).WriteFast(unitPosition);
+						auto skullObjectIndex = Objects_SpawnObject(objectData);
+						uint8_t *skullObject = (uint8_t*)Blam::Objects::Get(skullObjectIndex);
 
-				// notify clients that an object has been spawned
-				Simulation_SpawnObject(skullObjectIndex);
+						if (skullObject)
+						{
+							*(uint32_t*)(skullObject + 0x180) = Blam::Time::GetGameTicks();
+							*(uint8_t*)(skullObject + 0x178) &= 0xFDu;
+							*(uint8_t*)(skullObject + 0x179) = 0;
+							*(uint32_t*)(skullObject + 0x184) = -1;
+						}
+						ItemDrop(unitObjectIndex, skullObjectIndex, 0, 1.0f, 1);
+
+						// notify clients that an object has been spawned
+						Simulation_SpawnObject(skullObjectIndex);
+					}
+
+					Patches::Headhunter::UpdateSkullCountByUid(player.Properties.Uid, 0);
+				}
 			}
-			
-			headCount = 0;
-			Patches::Ui::UpdateHeadhunterSkullsString();
 		}
 	}
 

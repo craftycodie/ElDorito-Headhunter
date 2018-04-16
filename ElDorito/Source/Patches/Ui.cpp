@@ -542,15 +542,15 @@ namespace Patches::Ui
 			UI_Dialog_QueueLoad(dialog);
 	}
 
-	void UpdateHeadhunterSkullsString() //could be refactored, like most things.
+	void UpdateHeadhunterSkullsString(uint32_t skullCount) //could be refactored, like most things.
 	{
 		memset(chud_consumable2_name, 0, sizeof(chud_consumable2_name));
 
 		std::stringstream ss;
-		ss << "SKULLS: " << Patches::Headhunter::headCount;
-		std::string skullCount = ss.str();
-		for (size_t i = 0; i < skullCount.length(); i++)
-			chud_consumable2_name[i] = skullCount[i];
+		ss << "SKULLS: " << skullCount;
+		std::string skullCountString = ss.str();
+		for (size_t i = 0; i < skullCountString.length(); i++)
+			chud_consumable2_name[i] = skullCountString[i];
 	}
 }
 
@@ -1538,16 +1538,18 @@ namespace
 	int GetBrokenChudStateFlags33Values()
 	{
 		using Blam::Players::PlayerDatum;
+		using namespace Patches::Headhunter;
 		PlayerDatum *playerDatum = Blam::Players::GetPlayers().Get(Blam::Players::GetLocalPlayer(0));
 
 		int flags = 0;
 
-		bool headhunter = true;
-		if (headhunter)
+		int skullCount = GetSkullCountByUid(playerDatum->Properties.Uid);
+
+		if (GetHeadhunterEnabled())
 			flags |= 0x200; //Bit9, was inactive, now headhunter
-		if (Patches::Headhunter::headCount > 0)
+		if (skullCount > 0)
 			flags |= 0x400; //Bit10, was inactive, now holding heads
-		if (Patches::Headhunter::headCount > 9)
+		if (skullCount > GetMaxSkullCount())
 			flags |= 0x400; //Bit11, was inactive, now holding max heads
 
 		//Team and FFA flags that were in Flags 1 in halo 3 are now here.

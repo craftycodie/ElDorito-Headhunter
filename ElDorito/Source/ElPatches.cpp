@@ -35,6 +35,7 @@
 #include "Patches\GameEngineSettings.hpp"
 #include "Patches\DamageSystem.hpp"
 #include "Patches\PlayerScale.hpp"
+#include "Patches\Headhunter.hpp"
 #include "Game\Armor.hpp"
 
 #include <fstream>
@@ -78,6 +79,7 @@ namespace Patches
 		Maps::ApplyAll();
 		GameEngineSettings::ApplyAll();
 		DamageSystem::ApplyAll();
+		Headhunter::ApplyAll();
 
 		Network::PlayerPropertiesExtender::Instance().Add(std::make_shared<Game::Armor::ArmorExtension>());
 

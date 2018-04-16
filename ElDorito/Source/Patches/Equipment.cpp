@@ -29,6 +29,8 @@ namespace
 	void OvershieldDecayHook();
 	void VisionEndHook();
 	void VisionEndHook2();
+
+	void Hill_ScoreHook();
 }
 
 namespace Patches::Equipment
@@ -80,6 +82,11 @@ namespace Patches::Equipment
 		// reimplmented so that unrelated screen effects aren't deleted
 		Hook(0x789462, VisionEndHook, HookFlags::IsCall).Apply();
 		Hook(0x788703, VisionEndHook2, HookFlags::IsCall).Apply();
+
+		Patch::NopFill(Pointer::Base(0x5D67DA), 0x15); // Prevent hill contested while still allowing scoring.
+		Hook(0x5D5F87, Hill_ScoreHook).Apply(); // Score heads
+		Patch(0x5D668E, { 0xFF }).Apply(); //Remove crown icon from hill zones.
+		Patch(0x5D5F6C, { 0x90, 0x90 }).Apply(); //Instant scoring, rather than waiting 1 second
 	}
 }
 
@@ -91,6 +98,8 @@ namespace
 	const auto IsClient = (bool(*)())(0x00531D70);
 
 	using namespace Blam::Math;
+
+
 
 	int headCount = 0;
 	void __stdcall DoPickup(uint32_t playerIndex, uint32_t objectIndex)
@@ -137,9 +146,22 @@ namespace
 		bool headhunter = true;
 		if (headhunter)
 		{
-			if (equipmentObject->TagIndex == 0x00001565)
+			if (equipmentObject->TagIndex == 0x00001561)
 			{
+				if (headCount > 9)
+					return;
+
 				headCount = headCount + 1;
+
+				HUDIterator hudIterator(playerIndex);
+				while (hudIterator.Advance())
+				{
+					static auto DisplayPickupMessage = (int(__cdecl*)(uint32_t hudIndex, uint32_t eqipTagIndex))(0xA95850);
+					DisplayPickupMessage(hudIterator.HudIndex, equipmentObject->TagIndex);
+				}
+
+
+				Equipment_PlayPickupSound(playerIndex, equipmentObject->TagIndex);
 
 				const auto objects_dispose = (void(*)(uint32_t objectIndex))(0x00B2CD10);
 				objects_dispose(objectIndex);
@@ -440,6 +462,21 @@ namespace
 		}
 	}
 
+	__declspec(naked) void Hill_ScoreHook()
+	{
+		__asm
+		{
+			mov ecx, headCount
+			mov headCount, 0
+			push ecx
+			push edi
+			mov ecx, 0x54D840
+			call ecx
+			mov ecx, 0x9D5F91
+			jmp ecx
+		}
+	}
+
 	void __cdecl UnitDeathHook(int unitObjectIndex, int a2, int a3)
 	{
 		using namespace Blam::Tags;
@@ -525,7 +562,7 @@ namespace
 		{
 			for (int i = 0; i < headCount + 1; i++)
 			{
-				Objects_InitializeNewObject(objectData, 0x00001565, unitObjectIndex, 0);
+				Objects_InitializeNewObject(objectData, 0x00001561, unitObjectIndex, 0);
 				Pointer(objectData)(0x1c).WriteFast(unitPosition);
 				auto skullObjectIndex = Objects_SpawnObject(objectData);
 				uint8_t *skullObject = (uint8_t*)Blam::Objects::Get(skullObjectIndex);

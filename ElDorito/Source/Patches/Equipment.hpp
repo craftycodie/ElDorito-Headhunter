@@ -4,6 +4,4 @@
 namespace Patches::Equipment
 {
 	void ApplyAll();
-
-	extern int headCount;
 }

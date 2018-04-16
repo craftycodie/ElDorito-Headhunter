@@ -13,6 +13,7 @@
 #include "../ElDorito.hpp"
 #include "../Patch.hpp"
 #include "../Patches/Ui.hpp"
+#include "../Patches/Headhunter.hpp"
 #include <cstdint>
 #include <cassert>
 #include <unordered_map>
@@ -30,17 +31,12 @@ namespace
 	void OvershieldDecayHook();
 	void VisionEndHook();
 	void VisionEndHook2();
-
-	void Hill_ScoreHook();
 }
 
 namespace Patches::Equipment
 {
-	int headCount;
 	void ApplyAll()
 	{
-		Patches::Ui::UpdateHeadhunterSkullsString();
-
 		// implements the missing functionality in order to pickup equipment
 		Hook(0x139888, EquipmentPickupHook, HookFlags::IsJmpIfNotEqual).Apply();
 
@@ -86,11 +82,6 @@ namespace Patches::Equipment
 		// reimplmented so that unrelated screen effects aren't deleted
 		Hook(0x789462, VisionEndHook, HookFlags::IsCall).Apply();
 		Hook(0x788703, VisionEndHook2, HookFlags::IsCall).Apply();
-
-		Patch::NopFill(Pointer::Base(0x5D67DA), 0x15); // Prevent hill contested while still allowing scoring.
-		Hook(0x5D5F87, Hill_ScoreHook).Apply(); // Score heads
-		Patch(0x5D668E, { 0xFF }).Apply(); //Remove crown icon from hill zones.
-		Patch(0x5D5F6C, { 0x90, 0x90 }).Apply(); //Instant scoring, rather than waiting 1 second
 	}
 }
 
@@ -103,6 +94,7 @@ namespace
 
 	using namespace Blam::Math;
 	using namespace Patches::Equipment;
+	using namespace Patches::Headhunter;
 
 	void __stdcall DoPickup(uint32_t playerIndex, uint32_t objectIndex)
 	{
@@ -462,27 +454,6 @@ namespace
 			call DespawnEquipment
 			mov eax, 0x54EF97
 			jmp eax
-		}
-	}
-
-	__declspec(naked) void Hill_ScoreHook()
-	{
-		__asm
-		{
-			mov ecx, headCount
-			mov headCount, 0
-			push ecx
-			push edi
-			mov ecx, 0x54D840
-			call ecx
-		}
-
-		Patches::Ui::UpdateHeadhunterSkullsString();
-
-		__asm
-		{
-			mov ecx, 0x9D5F91
-			jmp ecx
 		}
 	}
 

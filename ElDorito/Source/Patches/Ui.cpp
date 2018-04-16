@@ -4,7 +4,7 @@
 #include "../Patch.hpp"
 #include "../Patches/Core.hpp"
 #include "../Patches/Input.hpp"
-#include "../Patches/Equipment.hpp"
+#include "../Patches/Headhunter.hpp"
 #include "../Blam/BlamInput.hpp"
 #include "../Blam/Tags/TagInstance.hpp"
 #include "../Blam/Tags/UI/ChudGlobalsDefinition.hpp"
@@ -547,7 +547,7 @@ namespace Patches::Ui
 		memset(chud_consumable2_name, 0, sizeof(chud_consumable2_name));
 
 		std::stringstream ss;
-		ss << "SKULLS: " << Patches::Equipment::headCount;
+		ss << "SKULLS: " << Patches::Headhunter::headCount;
 		std::string skullCount = ss.str();
 		for (size_t i = 0; i < skullCount.length(); i++)
 			chud_consumable2_name[i] = skullCount[i];
@@ -1545,9 +1545,9 @@ namespace
 		bool headhunter = true;
 		if (headhunter)
 			flags |= 0x200; //Bit9, was inactive, now headhunter
-		if (Patches::Equipment::headCount > 0)
+		if (Patches::Headhunter::headCount > 0)
 			flags |= 0x400; //Bit10, was inactive, now holding heads
-		if (Patches::Equipment::headCount > 9)
+		if (Patches::Headhunter::headCount > 9)
 			flags |= 0x400; //Bit11, was inactive, now holding max heads
 
 		//Team and FFA flags that were in Flags 1 in halo 3 are now here.

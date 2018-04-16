@@ -12,6 +12,7 @@
 #include "../Blam/BlamTime.hpp"
 #include "../ElDorito.hpp"
 #include "../Patch.hpp"
+#include "../Patches/Ui.hpp"
 #include <cstdint>
 #include <cassert>
 #include <unordered_map>
@@ -35,8 +36,11 @@ namespace
 
 namespace Patches::Equipment
 {
+	int headCount;
 	void ApplyAll()
 	{
+		Patches::Ui::UpdateHeadhunterSkullsString();
+
 		// implements the missing functionality in order to pickup equipment
 		Hook(0x139888, EquipmentPickupHook, HookFlags::IsJmpIfNotEqual).Apply();
 
@@ -98,10 +102,8 @@ namespace
 	const auto IsClient = (bool(*)())(0x00531D70);
 
 	using namespace Blam::Math;
+	using namespace Patches::Equipment;
 
-
-
-	int headCount = 0;
 	void __stdcall DoPickup(uint32_t playerIndex, uint32_t objectIndex)
 	{
 		struct PickupData
@@ -152,6 +154,7 @@ namespace
 					return;
 
 				headCount = headCount + 1;
+				Patches::Ui::UpdateHeadhunterSkullsString();
 
 				HUDIterator hudIterator(playerIndex);
 				while (hudIterator.Advance())
@@ -472,6 +475,12 @@ namespace
 			push edi
 			mov ecx, 0x54D840
 			call ecx
+		}
+
+		Patches::Ui::UpdateHeadhunterSkullsString();
+
+		__asm
+		{
 			mov ecx, 0x9D5F91
 			jmp ecx
 		}
@@ -581,6 +590,7 @@ namespace
 			}
 			
 			headCount = 0;
+			Patches::Ui::UpdateHeadhunterSkullsString();
 		}
 	}
 

@@ -34,6 +34,8 @@ namespace Patches::Ui
 
 	void ShowLanBrowser();
 
+	void UpdateHeadhunterSkullsString();
+
 	//These basically duplicate existing data from modules.
 	//However they make accessing in hooks a whole lot easier...
 	//Probably needs refactoring.

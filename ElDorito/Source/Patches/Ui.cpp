@@ -4,6 +4,7 @@
 #include "../Patch.hpp"
 #include "../Patches/Core.hpp"
 #include "../Patches/Input.hpp"
+#include "../Patches/Equipment.hpp"
 #include "../Blam/BlamInput.hpp"
 #include "../Blam/Tags/TagInstance.hpp"
 #include "../Blam/Tags/UI/ChudGlobalsDefinition.hpp"
@@ -66,6 +67,7 @@ namespace
 	void __fastcall c_hud_camera_view__render_outlines_hook(void *thisptr, void *unused, int localPlayerIndex, int playerMappingIndex, void *a3);
 
 	void chud_talking_player_name_hook();
+	void chud_consumable2_name_hook();
 	void __fastcall chud_add_player_marker_hook(void *thisptr, void *unused, uint8_t *data);
 
 	template <int MaxItems>
@@ -154,6 +156,8 @@ namespace
 	//Distortion direction for spartan, monitor, elite.
 	//If more are added, this needs to be increased or stored differently.
 	float hudDistortionDirection[3]{ 0,0,0 };
+
+	char16_t chud_consumable2_name[32] = {};
 }
 
 namespace Patches::Ui
@@ -291,6 +295,8 @@ namespace Patches::Ui
 
 		//Show the talking player's name on the HUD
 		Hook(0x6CA978, chud_talking_player_name_hook, HookFlags::IsCall).Apply();
+		// Store skull count in unused consumable 2 name.
+		Hook(0x6CAAF4, chud_consumable2_name_hook, HookFlags::IsCall).Apply();
 		// allow hiding nametags
 		Hook(0x68AA21, chud_add_player_marker_hook, HookFlags::IsCall).Apply();
 
@@ -534,6 +540,17 @@ namespace Patches::Ui
 		dialog = c_load_game_browser_screen_message(dialog, 0, 0x10355, 0, 4, 0x1000C, 0, 0);
 		if (dialog)
 			UI_Dialog_QueueLoad(dialog);
+	}
+
+	void UpdateHeadhunterSkullsString() //could be refactored, like most things.
+	{
+		memset(chud_consumable2_name, 0, sizeof(chud_consumable2_name));
+
+		std::stringstream ss;
+		ss << "SKULLS: " << Patches::Equipment::headCount;
+		std::string skullCount = ss.str();
+		for (size_t i = 0; i < skullCount.length(); i++)
+			chud_consumable2_name[i] = skullCount[i];
 	}
 }
 
@@ -837,15 +854,15 @@ namespace
 
 		switch (stringId)
 		{
-		case 0x1010A: // start_new_campaign
-		{
-			// Get the version string, convert it to uppercase UTF-16, and return it
-			std::string version = Utils::Version::GetVersionString();
-			std::transform(version.begin(), version.end(), version.begin(), toupper);
-			std::wstring unicodeVersion(version.begin(), version.end());
-			swprintf(outputBuffer, MaxStringLength, L"ELDEWRITO %s", unicodeVersion.c_str());
-			return true;
-		}
+			case 0x1010A: // start_new_campaign
+			{
+				// Get the version string, convert it to uppercase UTF-16, and return it
+				std::string version = Utils::Version::GetVersionString();
+				std::transform(version.begin(), version.end(), version.begin(), toupper);
+				std::wstring unicodeVersion(version.begin(), version.end());
+				swprintf(outputBuffer, MaxStringLength, L"ELDEWRITO %s", unicodeVersion.c_str());
+				return true;
+			}
 		}
 		return false;
 	}
@@ -1525,6 +1542,14 @@ namespace
 
 		int flags = 0;
 
+		bool headhunter = true;
+		if (headhunter)
+			flags |= 0x200; //Bit9, was inactive, now headhunter
+		if (Patches::Equipment::headCount > 0)
+			flags |= 0x400; //Bit10, was inactive, now holding heads
+		if (Patches::Equipment::headCount > 9)
+			flags |= 0x400; //Bit11, was inactive, now holding max heads
+
 		//Team and FFA flags that were in Flags 1 in halo 3 are now here.
 		auto session = Blam::Network::GetActiveSession();
 		if (session && session->IsEstablished())
@@ -1767,6 +1792,19 @@ namespace
 			add eax, 0xC7C
 			mov edi, eax
 			lea esi, chud_talking_player_name
+			mov ecx, 64
+			repe movsb
+			ret
+		}
+	}
+
+	__declspec(naked) void chud_consumable2_name_hook()
+	{
+		_asm
+		{
+			add eax, 0x608
+			mov edi, eax
+			lea esi, chud_consumable2_name;
 			mov ecx, 64
 			repe movsb
 			ret

@@ -1852,6 +1852,12 @@ namespace
 
 		auto waypointTrait = *(uint8_t*)((uint8_t*)player + 0x2DC1);
 
+		if (Patches::Headhunter::GetHeadhunterEnabled())
+		{
+			if (Patches::Headhunter::GetSkullCountByHandle(playerIndex) > 0)
+				return false;
+		}
+
 		switch (waypointTrait)
 		{
 		case 4:
@@ -1963,6 +1969,8 @@ namespace
 
 	__declspec(naked) void chud_update_player_marker_state_hook()
 	{
+		using namespace Patches::Headhunter;
+
 		int _ebx, _ecx, _edx, _ebp, _edi, _esp;
 		int markerSecondary;
 
@@ -1978,6 +1986,25 @@ namespace
 			mov _edi, edi
 			mov _esp, esp
 
+			call GetHeadhunterEnabled;
+			test ax, ax
+			je skip_headhunter
+
+			mov eax, [ebp + 0xC]
+			push eax
+			call GetSkullCountByHandle
+			test eax, eax
+			je skip_headhunter
+			cmp eax, 10
+			jne number_icon
+			mov[esi + 8], 19
+			jmp skip_headhunter
+
+			number_icon:
+			add eax, 10
+			mov [esi+8], eax
+
+			skip_headhunter:
 			//check if player is speaking
 			mov eax, [ebp + 0xC]
 			push eax
@@ -2028,7 +2055,7 @@ namespace
 
 	//TODO: 
 	//Refactor
-	enum class PlayerMarkerIconIndex : int
+	enum PlayerMarkerIconIndex : int
 	{
 		None = -1,
 		Speaker,
@@ -2053,7 +2080,7 @@ namespace
 		Nine
 	};
 
-	enum PlayerMarkerBitmapSpriteIndex : int
+	enum class PlayerMarkerBitmapSpriteIndex : int
 	{
 		Ally,
 		Enemy,
@@ -2168,6 +2195,14 @@ namespace
 				if (markerIconIndex == PlayerMarkerIconIndex::VIP)
 					return true;
 				break;
+			case GameType::KOTH:
+				if (Patches::Headhunter::GetHeadhunterEnabled())
+				{
+					if (markerIconIndex > 10 && markerIconIndex < 19)
+						return true;
+					else if (markerIconIndex == PlayerMarkerIconIndex::VIP)
+						return true;
+				}
 		}
 
 		return false;

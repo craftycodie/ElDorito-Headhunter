@@ -37,6 +37,7 @@ namespace
 	void DespawnEquipmentHook();
 
 	void Hill_ScoreHook();
+	void Hill_TraitsHook();
 }
 
 namespace Patches::Headhunter
@@ -192,6 +193,7 @@ namespace Patches::Headhunter
 		Hook(0x5D5F71, Hill_ScoreHook).Apply(); // Score heads
 		Patch(0x5D668E, { 0xFF }).Apply(); //Remove crown icon from hill zones.
 		Patch(0x5D5F6C, { 0x90, 0x90 }).Apply(); //Instant scoring, rather than waiting 1 second
+		Hook(0x5D537F, Hill_TraitsHook).Apply(); //Apply On-Hill traits to skull holders.
 	}
 
 	bool GetHeadhunterEnabled()
@@ -278,6 +280,43 @@ namespace
 		int skulls = GetSkullCountByHandle(playerHandle);
 		UpdateSkullCountByHandle(playerHandle, 0);
 		return skulls;
+	}
+
+	__declspec(naked) void Hill_TraitsHook()
+	{
+		__asm
+		{
+			mov eax, 0x748960
+			call eax
+
+			push ecx
+			push ebx
+			push edx
+			push ebp
+			push esi
+
+			push edi
+			call GetSkullCountByHandle
+			pop edi
+
+			pop esi
+			pop ebp
+			pop edx
+			pop ebx
+			pop ecx
+
+			cmp eax, 0
+			je no_skulls
+			mov word ptr [esi+0x2DEC], 01
+			jmp ed_return
+
+			no_skulls:
+			mov word ptr [esi+0x2DEC], 00
+
+			ed_return:
+			mov eax, 0x9D5384
+			jmp eax
+		}
 	}
 
 	__declspec(naked) void Hill_ScoreHook()

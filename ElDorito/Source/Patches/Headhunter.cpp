@@ -191,7 +191,7 @@ namespace Patches::Headhunter
 	{
 		Patch::NopFill(Pointer::Base(0x5D67DA), 0x15); // Prevent hill contested while still allowing scoring.
 		Hook(0x5D5F71, Hill_ScoreHook).Apply(); // Score heads
-		Patch(0x5D668E, { 0xFF }).Apply(); //Remove crown icon from hill zones.
+		Patch(0x5D668E, { 0x04 }).Apply(); //Remove crown icon from hill zones.
 		Patch(0x5D5F6C, { 0x90, 0x90 }).Apply(); //Instant scoring, rather than waiting 1 second
 		Hook(0x5D537F, Hill_TraitsHook).Apply(); //Apply On-Hill traits to skull holders.
 	}

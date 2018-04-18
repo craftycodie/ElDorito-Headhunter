@@ -35,6 +35,7 @@ namespace
 	void __cdecl EquipmentUseHook(int unitObjectIndex, int slotIndex, unsigned int isClient);
 	void __cdecl UnitDeathHook(int unitObjectIndex, int a2, int a3);
 	void DespawnEquipmentHook();
+	void game_engine_player_marker__hook();
 
 	void Hill_ScoreHook();
 	void Hill_TraitsHook();
@@ -43,6 +44,7 @@ namespace
 namespace Patches::Headhunter
 {
 	const int MAX_SKULL_COUNT = 10;
+	const auto IsClient = (bool(*)())(0x00531D70);
 
 	int GetMaxSkullCount()
 	{
@@ -194,6 +196,7 @@ namespace Patches::Headhunter
 		Patch(0x5D668E, { 0x04 }).Apply(); //Remove crown icon from hill zones.
 		Patch(0x5D5F6C, { 0x90, 0x90 }).Apply(); //Instant scoring, rather than waiting 1 second
 		Hook(0x5D537F, Hill_TraitsHook).Apply(); //Apply On-Hill traits to skull holders.
+		Hook(0x34943B, game_engine_player_marker__hook).Apply();
 	}
 
 	bool GetHeadhunterEnabled()
@@ -272,7 +275,6 @@ namespace
 	// Registered message handlers
 	std::vector<std::shared_ptr<HeadhunterMessageHandler>> skullMessageHandlers;
 
-	const auto IsClient = (bool(*)())(0x00531D70);
 	using namespace Patches::Headhunter;
 
 	int __stdcall HillScore(int playerHandle)
@@ -357,4 +359,57 @@ namespace
 			jmp edi
 		}
 	}
+
+	__declspec(naked) void game_engine_player_marker__hook()
+	{
+		using namespace Patches::Headhunter;
+
+		__asm
+		{
+
+				push eax
+				push ecx
+				push ebx
+				push edx
+				push esi
+				push ebp
+
+				call GetHeadhunterEnabled;
+				test ax, ax
+				je ed_return
+
+				pop ebp
+				mov eax, [ebp + 0xC]
+				push ebp
+
+				push eax
+				call GetSkullCountByHandle
+				test eax, eax
+				je ed_return
+				cmp eax, 10
+				jl number_icon
+				mov dword ptr[ebx + 8], 0x09
+				jmp ed_return
+
+			number_icon:
+				add eax, 10
+				mov dword ptr[ebx + 8], eax
+
+			ed_return:
+				pop eax
+				pop ebp
+				pop esi
+				pop edx
+				pop ebx
+				pop ecx
+				pop eax
+
+				cmp byte ptr[ebp - 8], 0
+				movss[esi + 0x8], xmm0
+				mov eax, 0x749440
+				jmp eax
+
+		}
+	}
+
 }

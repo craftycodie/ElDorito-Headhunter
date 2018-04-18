@@ -137,7 +137,7 @@ namespace
 			return;
 
 		//This needs work!
-		if (GetHeadhunterEnabled())
+		if (GetHeadhunterEnabled() && !IsClient())
 		{
 			if (equipmentObject->TagIndex == 0x00001561)
 			{

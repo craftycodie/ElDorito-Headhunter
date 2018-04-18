@@ -1986,25 +1986,6 @@ namespace
 			mov _edi, edi
 			mov _esp, esp
 
-			call GetHeadhunterEnabled;
-			test ax, ax
-			je skip_headhunter
-
-			mov eax, [ebp + 0xC]
-			push eax
-			call GetSkullCountByHandle
-			test eax, eax
-			je skip_headhunter
-			cmp eax, 10
-			jne number_icon
-			mov[esi + 8], 19
-			jmp skip_headhunter
-
-			number_icon:
-			add eax, 10
-			mov [esi+8], eax
-
-			skip_headhunter:
 			//check if player is speaking
 			mov eax, [ebp + 0xC]
 			push eax
@@ -2062,7 +2043,7 @@ namespace
 		DeathCross,
 		Tick,
 		Juggernaut,
-		Unknown,
+		VIPPlate,
 		Bomb,
 		Flag,
 		Skull,

@@ -35,9 +35,10 @@ namespace
 	void __cdecl EquipmentUseHook(int unitObjectIndex, int slotIndex, unsigned int isClient);
 	void __cdecl UnitDeathHook(int unitObjectIndex, int a2, int a3);
 	void DespawnEquipmentHook();
-	void game_engine_player_marker__hook();
+	void game_engine_player_marker_hook();
 
-	void Hill_ScoreHook();
+	void Hill_FFAScoreHook();
+	void Hill_TeamScoreHook();
 	void Hill_TraitsHook();
 }
 
@@ -191,12 +192,19 @@ namespace Patches::Headhunter
 
 	void ApplyAll()
 	{
+		//Scoring
+		Hook(0x5D5F71, Hill_FFAScoreHook).Apply(); // Score heads in FFA
+		Hook(0x5D5E9F, Hill_TeamScoreHook).Apply(); // Score heads in Teams
+		Patch::NopFill(Pointer::Base(0x5D5F6C), 0x2); // Instant scoring, rather than waiting 1 second, FFA
+		Patch::NopFill(Pointer::Base(0x5D5DB5), 0x6); // Above but teams.
+
+		//Hill Control
 		Patch::NopFill(Pointer::Base(0x5D67DA), 0x15); // Prevent hill contested while still allowing scoring.
-		Hook(0x5D5F71, Hill_ScoreHook).Apply(); // Score heads
-		Patch(0x5D668E, { 0x04 }).Apply(); //Remove crown icon from hill zones.
-		Patch(0x5D5F6C, { 0x90, 0x90 }).Apply(); //Instant scoring, rather than waiting 1 second
-		Hook(0x5D537F, Hill_TraitsHook).Apply(); //Apply On-Hill traits to skull holders.
-		Hook(0x34943B, game_engine_player_marker__hook).Apply();
+		Hook(0x5D537F, Hill_TraitsHook).Apply(); // Apply On-Hill traits to skull holders.
+
+		//HUD
+		Patch(0x5D668E, { 0x04 }).Apply(); // Replace hill crown with generic objective diamond.
+		Hook(0x34943B, game_engine_player_marker_hook).Apply(); // Add skull count to player markers.
 	}
 
 	bool GetHeadhunterEnabled()
@@ -321,7 +329,7 @@ namespace
 		}
 	}
 
-	__declspec(naked) void Hill_ScoreHook()
+	__declspec(naked) void Hill_FFAScoreHook()
 	{
 		__asm
 		{
@@ -360,7 +368,39 @@ namespace
 		}
 	}
 
-	__declspec(naked) void game_engine_player_marker__hook()
+	__declspec(naked) void Hill_TeamScoreHook()
+	{
+		__asm
+		{
+			pop eax
+			mov eax, 0x537830
+			call eax
+			mov ecx, eax
+
+			push ebx
+			push edx
+			push ebp
+			push esi
+			push ecx
+
+			push eax 
+			call HillScore
+
+			pop ecx
+			pop esi
+			pop ebp
+			pop edx
+			pop ebx
+
+			push eax
+			push ecx
+
+			mov ecx, 0x9D5EA5
+			jmp ecx
+		}
+	}
+
+	__declspec(naked) void game_engine_player_marker_hook()
 	{
 		using namespace Patches::Headhunter;
 

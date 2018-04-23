@@ -1576,7 +1576,7 @@ namespace
 		if (skullCount > 0)
 			flags |= 0x400; //Bit10, was inactive, now holding heads
 		if (skullCount > GetMaxSkullCount())
-			flags |= 0x400; //Bit11, was inactive, now holding max heads
+			flags |= 0x800; //Bit11, was inactive, now holding max heads
 
 		//Team and FFA flags that were in Flags 1 in halo 3 are now here.
 		auto session = Blam::Network::GetActiveSession();

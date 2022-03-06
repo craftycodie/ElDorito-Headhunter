@@ -78,8 +78,18 @@ namespace Patches::Headhunter
 				if (!localPlayer)
 					return;
 
-				if(message.playerUid == localPlayer->Properties.Uid)
+				if (message.playerUid == localPlayer->Properties.Uid) {
+					if (message.skullCount > 0) {
+						static auto Sound_PlaySoundEffect = (void(*)(uint32_t sndTagIndex, float volume))(0x5DE300);
+						Sound_PlaySoundEffect(0x183, 1.0);
+					}
+					else if (message.playerScored) {
+						static auto Sound_PlaySoundEffect = (void(*)(uint32_t sndTagIndex, float volume))(0x5DE300);
+						Sound_PlaySoundEffect(0x180, 1.0);
+					}
+
 					Patches::Ui::UpdateHeadhunterSkullsString(message.skullCount);
+				}
 			}
 		}
 
@@ -97,6 +107,7 @@ namespace Patches::Headhunter
 			{
 				stream->WriteUnsigned<uint64_t>(data->playerUid, 64);
 				stream->WriteUnsigned<uint32_t>(data->skullCount, 32);
+				stream->WriteBool(data->playerScored);
 			}
 		}
 
@@ -113,6 +124,7 @@ namespace Patches::Headhunter
 			{
 				data->playerUid = stream->ReadUnsigned<uint64_t>(64);
 				data->skullCount = stream->ReadUnsigned<uint32_t>(32);
+				data->playerScored = stream->ReadBool();
 			}
 
 			return true;
@@ -225,14 +237,14 @@ namespace Patches::Headhunter
 		return true;
 	}
 
-	void UpdateSkullCountByHandle(int playerHandle, uint32_t skullCount)
+	void UpdateSkullCountByHandle(int playerHandle, uint32_t skullCount, bool didScore)
 	{
 		auto players = Blam::Players::GetPlayers();
 		auto player = players.Get(playerHandle);
-		UpdateSkullCountByUid(player->Properties.Uid, skullCount);
+		UpdateSkullCountByUid(player->Properties.Uid, skullCount, didScore);
 	}
 
-	void UpdateSkullCountByUid(uint64_t uid, uint32_t skullCount)
+	void UpdateSkullCountByUid(uint64_t uid, uint32_t skullCount, bool didScore)
 	{
 		auto* session = Blam::Network::GetActiveSession();
 		if (!(session && session->IsEstablished() && session->IsHost()))
@@ -250,6 +262,7 @@ namespace Patches::Headhunter
 		HeadhunterMessage message = HeadhunterMessage(HeadhunterMessageType::SkullCount);
 		message.playerUid = uid;
 		message.skullCount = skullCount;
+		message.playerScored = didScore;
 		BroadcastHeadhunterMessage(message);
 	}
 
@@ -288,7 +301,7 @@ namespace
 	int __stdcall HillScore(int playerHandle)
 	{
 		int skulls = GetSkullCountByHandle(playerHandle);
-		UpdateSkullCountByHandle(playerHandle, 0);
+		UpdateSkullCountByHandle(playerHandle, 0, true);
 		return skulls;
 	}
 

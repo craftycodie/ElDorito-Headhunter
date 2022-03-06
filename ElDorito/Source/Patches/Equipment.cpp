@@ -139,7 +139,7 @@ namespace
 		//This needs work!
 		if (GetHeadhunterEnabled() && !IsClient())
 		{
-			if (equipmentObject->TagIndex == 0x00001561)
+			if (equipmentObject->TagIndex == 0x00001573)
 			{
 				uint32_t skullCount = GetSkullCountByUid(playerDatum->Properties.Uid);
 
@@ -148,7 +148,7 @@ namespace
 
 				skullCount = skullCount + 1;
 
-				UpdateSkullCountByUid(playerDatum->Properties.Uid, skullCount);
+				UpdateSkullCountByUid(playerDatum->Properties.Uid, skullCount, false);
 
 				HUDIterator hudIterator(playerIndex);
 				while (hudIterator.Advance())
@@ -156,9 +156,6 @@ namespace
 					static auto DisplayPickupMessage = (int(__cdecl*)(uint32_t hudIndex, uint32_t eqipTagIndex))(0xA95850);
 					DisplayPickupMessage(hudIterator.HudIndex, equipmentObject->TagIndex);
 				}
-
-
-				Equipment_PlayPickupSound(playerIndex, equipmentObject->TagIndex);
 
 				const auto objects_dispose = (void(*)(uint32_t objectIndex))(0x00B2CD10);
 				objects_dispose(objectIndex);
@@ -549,7 +546,7 @@ namespace
 				{
 					for (int i = 0; i < GetSkullCountByUid(player.Properties.Uid) + 1; i++)
 					{
-						Objects_InitializeNewObject(objectData, 0x00001561, unitObjectIndex, 0);
+						Objects_InitializeNewObject(objectData, 0x00001573, unitObjectIndex, 0);
 						Pointer(objectData)(0x1c).WriteFast(unitPosition);
 						auto skullObjectIndex = Objects_SpawnObject(objectData);
 						uint8_t *skullObject = (uint8_t*)Blam::Objects::Get(skullObjectIndex);
@@ -567,7 +564,7 @@ namespace
 						Simulation_SpawnObject(skullObjectIndex);
 					}
 
-					Patches::Headhunter::UpdateSkullCountByUid(player.Properties.Uid, 0);
+					Patches::Headhunter::UpdateSkullCountByUid(player.Properties.Uid, 0, false);
 				}
 			}
 		}

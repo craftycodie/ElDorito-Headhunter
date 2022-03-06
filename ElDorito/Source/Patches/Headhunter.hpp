@@ -21,6 +21,7 @@ namespace Patches::Headhunter
 
 		uint64_t playerUid; //Big, but there's not much in here anyway. Also, this means players leaving and joining wont cause issues.
 		uint32_t skullCount;
+		bool playerScored;
 	};
 
 	// Interface for a class which processes and handles voting messages.
@@ -45,10 +46,9 @@ namespace Patches::Headhunter
 	void ApplyAll();
 	void Init();
 
-	extern int headCount;
 	bool GetHeadhunterEnabled();
-	void UpdateSkullCountByUid(uint64_t uid, uint32_t skullCount);
-	void UpdateSkullCountByHandle(int playerHandle, uint32_t skullCount);
+	void UpdateSkullCountByUid(uint64_t uid, uint32_t skullCount, bool didScore);
+	void UpdateSkullCountByHandle(int playerHandle, uint32_t skullCount, bool didScore);
 
 	uint32_t GetSkullCountByUid(uint64_t uid);
 	uint32_t GetSkullCountByHandle(int handle);

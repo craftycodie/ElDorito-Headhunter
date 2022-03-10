@@ -52,6 +52,8 @@ namespace Patches::Headhunter
 
 	uint32_t GetSkullCountByUid(uint64_t uid);
 	uint32_t GetSkullCountByHandle(int handle);
+	uint32_t GetSkullCountByHandle(int handle);
+	bool InHill(uint64_t uid);
 
 	int GetMaxSkullCount();
 }

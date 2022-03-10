@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cassert>
 #include <unordered_map>
+#include <Windows.h>
 
 using namespace Patches::Headhunter;
 
@@ -27,14 +28,6 @@ namespace
 	typedef Patches::CustomPackets::PacketSender<HeadhunterMessage> HeadhunterMessagePacketSender;
 	typedef Patches::CustomPackets::Packet<HeadhunterMessage> HeadhunterMessagePacket;
 
-	void EquipmentPickupHook();
-	void EquipmentActionStateHook();
-	char __cdecl Unit_EquipmentDetachHook(uint32_t unitObjectIndex, uint32_t equipmentObjectIndex, int a3);
-	void* __cdecl Player_GetArmorAbilitiesCHUDHook(Blam::Players::PlayerDatum* playerDatum);
-	bool __cdecl UnitUpdateHook(uint32_t unitObjectIndex);
-	void __cdecl EquipmentUseHook(int unitObjectIndex, int slotIndex, unsigned int isClient);
-	void __cdecl UnitDeathHook(int unitObjectIndex, int a2, int a3);
-	void DespawnEquipmentHook();
 	void game_engine_player_marker_hook();
 
 	void Hill_FFAScoreHook();
@@ -53,6 +46,7 @@ namespace Patches::Headhunter
 	}
 
 	std::map<uint64_t, uint32_t> skullCounts;
+	int soundTime = 0;
 
 	std::shared_ptr<HeadhunterMessagePacketSender> HeadhunterPacketSender;
 	void ReceivedHeadhunterMessage(Blam::Network::Session *session, int peer, const HeadhunterMessage &message);
@@ -79,13 +73,14 @@ namespace Patches::Headhunter
 					return;
 
 				if (message.playerUid == localPlayer->Properties.Uid) {
-					if (message.skullCount > 0) {
+					if (message.skullCount > 0 && timeGetTime() > soundTime + 1250) {
 						static auto Sound_PlaySoundEffect = (void(*)(uint32_t sndTagIndex, float volume))(0x5DE300);
-						Sound_PlaySoundEffect(0x183, 1.0);
+						Sound_PlaySoundEffect(0x183, 0.9);
+						soundTime = timeGetTime();
 					}
 					else if (message.playerScored) {
 						static auto Sound_PlaySoundEffect = (void(*)(uint32_t sndTagIndex, float volume))(0x5DE300);
-						Sound_PlaySoundEffect(0x180, 1.0);
+						Sound_PlaySoundEffect(0x180, 0.9);
 					}
 
 					Patches::Ui::UpdateHeadhunterSkullsString(message.skullCount);
@@ -244,6 +239,7 @@ namespace Patches::Headhunter
 		UpdateSkullCountByUid(player->Properties.Uid, skullCount, didScore);
 	}
 
+
 	void UpdateSkullCountByUid(uint64_t uid, uint32_t skullCount, bool didScore)
 	{
 		auto* session = Blam::Network::GetActiveSession();
@@ -288,6 +284,18 @@ namespace Patches::Headhunter
 		{
 			return 0;
 		}
+	}
+
+	bool InHill(uint64_t uid)
+	{
+		auto players = Blam::Players::GetPlayers();
+		for (auto player : players) {
+			if (player.Properties.Uid == uid) {
+				return player.Unknown2DB6[0x36] != 0;
+			}
+		}
+
+		return false;
 	}
 }
 

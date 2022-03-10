@@ -542,25 +542,36 @@ namespace
 		{
 			for (auto player : Blam::Players::GetPlayers())
 			{
-				if (player.DeadSlaveUnit.Handle == unitObjectIndex)
+				if (player.DeadSlaveUnit.Handle == unitObjectIndex && !InHill(player.Properties.Uid))
 				{
 					for (int i = 0; i < GetSkullCountByUid(player.Properties.Uid) + 1; i++)
 					{
 						Objects_InitializeNewObject(objectData, 0x00001573, unitObjectIndex, 0);
+
 						Pointer(objectData)(0x1c).WriteFast(unitPosition);
+
+						const auto object_set_position = (void(*)(uint32_t objectIndex, RealVector3D * position, RealVector3D * forward, RealVector3D * up, int scenarioLocation, int a8))(0x00B33550); // client only
+
 						auto skullObjectIndex = Objects_SpawnObject(objectData);
-						uint8_t *skullObject = (uint8_t*)Blam::Objects::Get(skullObjectIndex);
+						auto skullObjectPtr = Blam::Objects::Get(skullObjectIndex);
 
-						if (skullObject)
+						if (skullObjectPtr)
 						{
-							*(uint32_t*)(skullObject + 0x180) = Blam::Time::GetGameTicks();
-							*(uint8_t*)(skullObject + 0x178) &= 0xFDu;
-							*(uint8_t*)(skullObject + 0x179) = 0;
-							*(uint32_t*)(skullObject + 0x184) = -1;
+							*(uint32_t*)(skullObjectPtr + 0x180) = Blam::Time::GetGameTicks();
+							*(uint8_t*)(skullObjectPtr + 0x178) &= 0xFDu;
+							*(uint8_t*)(skullObjectPtr + 0x179) = 0;
+							*(uint32_t*)(skullObjectPtr + 0x184) = -1;
 						}
-						ItemDrop(unitObjectIndex, skullObjectIndex, 0, 1.0f, 1);
 
-						// notify clients that an object has been spawned
+						ItemDrop(unitObjectIndex, skullObjectIndex, 0, 2.5f, 1); 
+						auto skullPosition = skullObjectPtr->Position;
+						skullPosition.I = unitPosition.I;
+						skullPosition.J = unitPosition.J;
+						skullPosition.K = unitPosition.K + 0.75;
+						auto skullForward = skullObjectPtr->Forward;
+						auto skullUp = skullObjectPtr->Up;
+						object_set_position(skullObjectIndex, &skullPosition, &skullForward, &skullUp, 0, 0);
+
 						Simulation_SpawnObject(skullObjectIndex);
 					}
 
